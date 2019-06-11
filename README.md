@@ -9,7 +9,7 @@
 
 ### Clone this repository to your fastest storage that mounted on Jetson Nano
 
-build-kernel.sh of this repository downloads kernel source code and make it under the cloned directory.
+`build-kernel.sh` of this repository downloads kernel source code and makes it under the cloned directory.
 
 ```
 $ git clone https://github.com/yoffy/jetson-nano-kernel.git
@@ -35,8 +35,11 @@ $ ./clone-storage.sh /dev/sda
 ```
 
 Edit exlinux.conf of SD card for booting from USB storage:
+
 ```
 $ sudoedit /boot/extlinux/extlinux.conf
 :
 	APPEND ${cbootargs} rootfstype=ext4 root=/dev/sda rw rootwait
 ```
+
+If failed to booting, revert `extlinux.conf` to `root=/dev/mmcblk0p1`.
