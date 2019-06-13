@@ -3,7 +3,7 @@
 ## Includes
 
 * USB 3 driver in kernel
-* Intel Dual Band Wireless-AC 9620 driver module (iwlwifi)
+* Intel Dual Band Wireless-AC 9260 driver module (iwlwifi)
 
 ## How to use
 
