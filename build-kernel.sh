@@ -36,7 +36,7 @@ if [[ ! -d kernel/kernel-4.9 ]]; then
 	rm -rf public_sources
 fi
 
-# patch kernel for iwlwifi-9620
+# patch kernel for iwlwifi-9260
 pushd kernel/kernel-4.9
 patch -p1 -N < "${WIFI_PATCH}" && true
 popd
