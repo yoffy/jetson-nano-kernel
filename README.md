@@ -4,6 +4,7 @@
 
 * USB 3 driver in kernel
 * Intel Dual Band Wireless-AC 9260 driver module (iwlwifi)
+	* WiFi and Bluetooth
 
 ## How to use
 
@@ -24,6 +25,7 @@ $ cd jetson-nano-kernel
 $ ./build-kernel.sh
 $ ./install-kernel.sh
 $ ./install-iwlwifi.sh
+$ sudo reboot
 ```
 
 ### (option) Clone SD card into USB storage

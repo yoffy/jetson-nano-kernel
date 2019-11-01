@@ -2,22 +2,36 @@
 
 set -eu
 
-TEGRA_KERNEL_OUT=`pwd`/workdir/out
+source download-kernel.sh
 
-mkdir -p workdir
 pushd workdir
 
 # download wifi driver source code
 if [[ ! -d backport-iwlwifi ]]; then
 	git clone https://git.kernel.org/pub/scm/linux/kernel/git/iwlwifi/backport-iwlwifi.git
+	pushd backport-iwlwifi
+	git checkout release/core46
+	popd
 fi
 
 # configure
-make -C backport-iwlwifi KLIB_BUILD=${TEGRA_KERNEL_OUT} defconfig-iwlwifi-public
-sed -i 's/CPTCFG_IWLMVM_VENDOR_CMDS=y/# CPTCFG_IWLMVM_VENDOR_CMDS is not set/' backport-iwlwifi/.config
+make -C backport-iwlwifi defconfig-iwlwifi-public
 
 # compile
 make -C backport-iwlwifi -j$(( $(nproc) + 1 ))
 
-# install
+# install driver
 sudo make -C backport-iwlwifi modules_install
+
+
+# download firmwares
+if [[ ! -d linux-firmware ]]; then
+	git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+fi
+
+# install firmwares
+sudo cp linux-firmware/iwlwifi-9260* /lib/firmware/
+
+popd
+
+./install-btusb.sh
