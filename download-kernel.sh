@@ -4,7 +4,7 @@ set -eu
 
 TEGRA_KERNEL_OUT=`pwd`/workdir/out
 PACK_NAME=public_sources.tbz2
-PACK_URL="https://developer.nvidia.com/embedded/dlc/r32-2-1_Release_v1.0/Nano-TX1/sources/${PACK_NAME}"
+PACK_URL="https://developer.nvidia.com/embedded/dlc/r32-3-1_Release_v1.0/Sources/T210/${PACK_NAME}"
 KERNEL_DIR=kernel/kernel-4.9
 
 # @param $1 File path.
@@ -31,9 +31,9 @@ fi
 # extract kernel source code
 if [[ ! -d ${KERNEL_DIR} ]]; then
 	echo "Extracting ${PACK_NAME}"
-	tar -xf "${PACK_NAME}" public_sources/kernel_src.tbz2
-	tar -xf public_sources/kernel_src.tbz2
-	rm -rf public_sources
+	tar -xf "${PACK_NAME}" Linux_for_Tegra/source/public/kernel_src.tbz2
+	tar -xf Linux_for_Tegra/source/public/kernel_src.tbz2
+	rm -rf Linux_for_Tegra
 fi
 
 popd
