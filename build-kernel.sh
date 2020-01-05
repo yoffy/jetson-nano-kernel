@@ -4,6 +4,8 @@ set -eu
 
 source download-kernel.sh
 
+pushd workdir
+
 # copy usb firmware
 USB_FIRMWARE="tegra21x_xusb_firmware"
 cp "/lib/firmware/${USB_FIRMWARE}" ${KERNEL_DIR}/firmware/
@@ -18,3 +20,5 @@ bash ${KERNEL_DIR}/scripts/config \
 
 echo "Making kernel"
 make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) ARCH=arm64 O=${TEGRA_KERNEL_OUT}
+
+popd
