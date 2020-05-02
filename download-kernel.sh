@@ -4,7 +4,7 @@ set -eu
 
 TEGRA_KERNEL_OUT=`pwd`/workdir/out
 PACK_NAME=public_sources.tbz2
-PACK_URL="https://developer.nvidia.com/embedded/dlc/r32-3-1_Release_v1.0/Sources/T210/${PACK_NAME}"
+PACK_URL="https://developer.nvidia.com/embedded/L4T/r32_Release_v4.2/Sources/T210/${PACK_NAME}"
 KERNEL_DIR=kernel/kernel-4.9
 
 # @param $1 File path.
