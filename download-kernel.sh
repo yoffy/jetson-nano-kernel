@@ -24,6 +24,7 @@ mkdir -p "${TEGRA_KERNEL_OUT}"
 # download kernel source code
 PACK_SIZE=$(wget --spider "${PACK_URL}" 2>&1 | grep '^Length: [0-9]\+' | cut -d' ' -f2)
 if ! CheckFileSize "${PACK_NAME}" ${PACK_SIZE}; then
+	rm -rf "${PACK_NAME}" "${KERNEL_DIR}"
 	echo "Downloading ${PACK_URL}"
 	wget "${PACK_URL}"
 fi

@@ -9,10 +9,10 @@ pushd workdir
 # download wifi driver source code
 if [[ ! -d backport-iwlwifi ]]; then
 	git clone https://git.kernel.org/pub/scm/linux/kernel/git/iwlwifi/backport-iwlwifi.git
-	pushd backport-iwlwifi
-	git checkout release/core46
-	popd
 fi
+pushd backport-iwlwifi
+git checkout release/core46
+popd
 
 # configure
 make -C backport-iwlwifi defconfig-iwlwifi-public
