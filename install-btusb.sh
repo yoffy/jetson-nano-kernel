@@ -15,6 +15,9 @@ patch -p1 -N < "${BTUSB_PATCH}" && true
 
 echo "Configuring kernel"
 ${MAKEJ} ARCH=arm64 O=${TEGRA_KERNEL_OUT} tegra_defconfig
+bash scripts/config \
+        --file "${TEGRA_KERNEL_OUT}/.config" \
+        --set-str LOCALVERSION "-tegra"
 ${MAKEJ} ARCH=arm64 O=${TEGRA_KERNEL_OUT} prepare
 ${MAKEJ} ARCH=arm64 O=${TEGRA_KERNEL_OUT} scripts
 
