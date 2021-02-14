@@ -28,6 +28,10 @@ if ! CheckFileSize "${PACK_NAME}" ${PACK_SIZE}; then
 	echo "Downloading ${PACK_URL}"
 	wget "${PACK_URL}"
 fi
+if [[ ${PACK_NAME} -nt ${KERNEL_DIR} ]]; then
+    echo "${PACK_NAME} newer than ${KERNEL_DIR}. Clean ${KERNEL_DIR}."
+	rm -rf "${KERNEL_DIR}"
+fi
 
 # extract kernel source code
 if [[ ! -d ${KERNEL_DIR} ]]; then
@@ -36,5 +40,7 @@ if [[ ! -d ${KERNEL_DIR} ]]; then
 	tar -xf Linux_for_Tegra/source/public/kernel_src.tbz2
 	rm -rf Linux_for_Tegra
 fi
+
+touch "${KERNEL_DIR}"
 
 popd
