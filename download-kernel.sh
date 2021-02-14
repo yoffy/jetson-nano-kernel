@@ -29,7 +29,7 @@ if ! CheckFileSize "${PACK_NAME}" ${PACK_SIZE}; then
 	wget "${PACK_URL}"
 fi
 if [[ ${PACK_NAME} -nt ${KERNEL_DIR} ]]; then
-    echo "${PACK_NAME} newer than ${KERNEL_DIR}. Clean ${KERNEL_DIR}."
+	echo "${PACK_NAME} newer than ${KERNEL_DIR}. Clean ${KERNEL_DIR}."
 	rm -rf "${KERNEL_DIR}"
 fi
 
