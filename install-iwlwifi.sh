@@ -15,6 +15,9 @@ git fetch origin
 git checkout origin/release/core46
 popd
 
+# clean
+make -C backport-iwlwifi clean
+
 # configure
 make -C backport-iwlwifi defconfig-iwlwifi-public
 
@@ -28,6 +31,10 @@ sudo make -C backport-iwlwifi modules_install
 # download firmwares
 if [[ ! -d linux-firmware ]]; then
 	git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+else
+	pushd linux-firmware
+	git pull
+	popd
 fi
 
 # install firmwares

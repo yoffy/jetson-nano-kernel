@@ -3,8 +3,8 @@
 set -eu
 
 MAKEJ="make -j$(( $(nproc) + 1 ))"
-BTUSB_PATCH=`pwd`/btusb.patch
-INSTALL_DIR=/lib/modules/`uname -r`/kernel/drivers/bluetooth
+BTUSB_PATCH=$(pwd)/btusb.patch
+INSTALL_DIR=/lib/modules/$(uname -r)/updates/drivers/bluetooth
 
 source download-kernel.sh
 
@@ -27,7 +27,10 @@ ${MAKEJ} ARCH=arm64 O=${TEGRA_KERNEL_OUT} M=drivers/bluetooth
 ${MAKEJ} ARCH=arm64 O=${TEGRA_KERNEL_OUT} M=drivers/bluetooth
 
 echo "Installing module"
-sudo modprobe -r btusb
+sudo modprobe -r btusb && true
+sudo mkdir -p ${INSTALL_DIR}
 sudo cp ${TEGRA_KERNEL_OUT}/drivers/bluetooth/btusb.ko ${INSTALL_DIR}/
+sudo depmod -a
+sudo modprobe btusb && true
 
 popd
