@@ -11,7 +11,8 @@ if [[ ! -d backport-iwlwifi ]]; then
 	git clone https://git.kernel.org/pub/scm/linux/kernel/git/iwlwifi/backport-iwlwifi.git
 fi
 pushd backport-iwlwifi
-git checkout release/core47
+git fetch origin
+git checkout origin/release/core46
 popd
 
 # configure
