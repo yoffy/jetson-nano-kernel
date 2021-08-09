@@ -3,8 +3,12 @@
 set -eu
 
 TEGRA_KERNEL_OUT=`pwd`/workdir/out
+## https://developer.nvidia.com/embedded/downloads
+## -> Jetson Linux Driver Package (L4T)
+## -> Release Page
+## -> L4T Driver package (BSP) Sources
 PACK_NAME=public_sources.tbz2
-PACK_URL="https://developer.nvidia.com/embedded/L4T/r32_Release_v5.0/sources/T210/${PACK_NAME}"
+PACK_URL="https://developer.nvidia.com/embedded/l4t/r32_release_v6.1/sources/t210/${PACK_NAME}"
 KERNEL_DIR=kernel/kernel-4.9
 
 # @param $1 File path.
