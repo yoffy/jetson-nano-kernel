@@ -1,0 +1,12 @@
+--- a/drivers/usb/host/xhci-ring.c	2021-08-11 19:20:35.679357656 +0900
++++ b/drivers/usb/host/xhci-ring.c	2021-08-11 19:20:23.755033993 +0900
+@@ -2496,7 +2496,8 @@
+ 			 * warnings.
+ 			 */
+ 			if (!(trb_comp_code == COMP_STOP ||
+-						trb_comp_code == COMP_STOP_INVAL)) {
++						trb_comp_code == COMP_STOP_INVAL ||
++						ep_ring->last_td_was_short)) {
+ 				xhci_warn(xhci, "WARN Event TRB for slot %d ep %d with no TDs queued?\n",
+ 						TRB_TO_SLOT_ID(le32_to_cpu(event->flags)),
+ 						ep_index);
