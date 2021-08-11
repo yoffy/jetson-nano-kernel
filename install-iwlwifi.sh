@@ -17,6 +17,7 @@ popd
 
 # clean
 make -C backport-iwlwifi clean
+rm -rf backport-iwlwifi/.config
 
 # configure
 make -C backport-iwlwifi defconfig-iwlwifi-public
