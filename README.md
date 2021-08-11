@@ -2,7 +2,6 @@
 
 ## Includes
 
-* USB 3 driver in kernel
 * Intel Dual Band Wireless-AC 9260 driver module (iwlwifi)
 	* WiFi and Bluetooth
 
@@ -28,7 +27,7 @@ $ ./install-iwlwifi.sh
 $ sudo reboot
 ```
 
-### (option) Clone SD card into USB storage
+### (optional) Clone SD card into USB storage
 
 WARNING: `clone-storage.sh` erases the target device
 
