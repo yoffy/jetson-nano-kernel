@@ -12,7 +12,7 @@ if [[ ! -d backport-iwlwifi ]]; then
 fi
 pushd backport-iwlwifi
 git fetch origin
-git checkout origin/release/core46
+git checkout origin/release/core52
 popd
 
 # clean
