@@ -31,7 +31,7 @@ sudo make -C backport-iwlwifi modules_install
 
 # download firmwares
 if [[ ! -d linux-firmware ]]; then
-	git clone git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+	git clone https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
 else
 	pushd linux-firmware
 	git pull
