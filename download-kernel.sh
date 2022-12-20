@@ -3,12 +3,12 @@
 set -eu
 
 TEGRA_KERNEL_OUT=`pwd`/workdir/out
-## https://developer.nvidia.com/embedded/downloads
-## -> Jetson Linux Driver Package (L4T)
-## -> Release Page
-## -> L4T Driver package (BSP) Sources
+## https://developer.nvidia.com/embedded/jetson-linux-archive
+## -> Driver package (BSP) Sources
 PACK_NAME=public_sources.tbz2
-PACK_URL="https://developer.nvidia.com/embedded/l4t/r32_release_v7.1/sources/t210/${PACK_NAME}"
+PACK_URL="https://developer.nvidia.com/downloads/remack-sdksjetpack-463r32releasev73sourcest210publicsourcestbz2"
+#PACK_SIZE=$(LC_ALL=C wget --spider "${PACK_URL}" 2>&1 | grep '^Length: [0-9]\+' | cut -d' ' -f2)
+PACK_SIZE=161822907
 KERNEL_DIR=kernel/kernel-4.9
 
 # @param $1 File path.
@@ -26,11 +26,10 @@ pushd workdir
 mkdir -p "${TEGRA_KERNEL_OUT}"
 
 # download kernel source code
-PACK_SIZE=$(LC_ALL=C wget --spider "${PACK_URL}" 2>&1 | grep '^Length: [0-9]\+' | cut -d' ' -f2)
 if ! CheckFileSize "${PACK_NAME}" ${PACK_SIZE}; then
 	rm -rf "${PACK_NAME}" "${KERNEL_DIR}"
 	echo "Downloading ${PACK_URL}"
-	wget "${PACK_URL}"
+	wget -O "${PACK_NAME}" "${PACK_URL}"
 fi
 if [[ ${PACK_NAME} -nt ${KERNEL_DIR} ]]; then
 	echo "${PACK_NAME} newer than ${KERNEL_DIR}. Clean ${KERNEL_DIR} and ${TEGRA_KERNEL_OUT}."
