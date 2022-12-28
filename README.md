@@ -4,6 +4,7 @@
 
 * Intel Dual Band Wireless-AC 9260 driver module (iwlwifi)
 	* WiFi and Bluetooth
+* SMB 2.1 driver module
 
 ## How to use
 
@@ -24,6 +25,7 @@ $ cd jetson-nano-kernel
 $ ./build-kernel.sh
 $ ./install-kernel.sh
 $ ./install-iwlwifi.sh
+$ ./install-cifs
 $ sudo reboot
 ```
 
@@ -44,3 +46,19 @@ $ sudoedit /boot/extlinux/extlinux.conf
 ```
 
 If failed to booting, revert `extlinux.conf` to `root=/dev/mmcblk0p1`.
+
+### (optional) Mount SMB (cifs)
+
+Add arguments `-o vers=2.1` to `mount` if occurs `error(95)` like below:
+
+```sh
+$ sudo mount -t cifs -o //network-volume /mnt/netvol
+mount error(95): Operation not supported
+Refer to the mount.cifs(8) manual page (e.g. man mount.cifs)
+```
+
+Fixed command:
+
+```sh
+$ sudo mount -t cifs -o vers=2.1 //network-volume /mnt/netvol
+```

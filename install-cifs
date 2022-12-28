@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -eu
+
+source download-kernel.sh
+
+CIFS_PATCH="${PWD}/cifs.patch"
+FS_DIR="/lib/modules/$(uname -r)/updates/fs"
+export EXTRAVERSION="-tegra"
+export ARCH=arm64
+
+pushd workdir
+
+## config
+zcat /proc/config.gz > "${TEGRA_KERNEL_OUT}/.config"
+pushd "${TEGRA_KERNEL_OUT}"
+patch -p1 -N < "${CIFS_PATCH}"
+popd
+
+## build
+make -C ${KERNEL_DIR} O=${TEGRA_KERNEL_OUT} EXTRAVERSION=${EXTRAVERSION} modules_prepare
+make -C ${KERNEL_DIR} O=${TEGRA_KERNEL_OUT} -j$(( $(nproc) + 1 )) M=fs/cifs
+make -C ${KERNEL_DIR} O=${TEGRA_KERNEL_OUT} -j$(( $(nproc) + 1 )) M=fs/fscache
+make -C ${KERNEL_DIR} O=${TEGRA_KERNEL_OUT} -j$(( $(nproc) + 1 )) M=fs/cachefiles
+
+## install
+sudo modprobe -r cifs && true
+sudo modprobe -r fscache && true
+sudo modprobe -r cachefiles && true
+sudo mkdir -p "${FS_DIR}/cifs" "${FS_DIR}/fscache" "${FS_DIR}/cachefiles"
+sudo cp "${TEGRA_KERNEL_OUT}/fs/cifs/cifs.ko" "${FS_DIR}/cifs/"
+sudo cp "${TEGRA_KERNEL_OUT}/fs/fscache/fscache.ko" "${FS_DIR}/fscache/"
+sudo cp "${TEGRA_KERNEL_OUT}/fs/cachefiles/cachefiles.ko" "${FS_DIR}/cachefiles/"
+sudo depmod -a
+sudo modprobe cifs && true
+
+popd
