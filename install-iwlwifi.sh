@@ -2,7 +2,7 @@
 
 set -eu
 
-BUILD_BUG_H_PATCH="${PWD}/build_bug.h.patch"
+BACKPORT_IWLWIFI_PATCH="${PWD}/backport-iwlwifi.patch"
 
 source download-kernel.sh
 
@@ -15,8 +15,9 @@ fi
 pushd backport-iwlwifi
 git fetch origin
 git checkout origin/release/core52
-# patch for L4T 32.7.3
-git apply "${BUILD_BUG_H_PATCH}"
+# patch for L4T 32.7.4
+git checkout .
+git apply "${BACKPORT_IWLWIFI_PATCH}"
 popd
 
 # clean
