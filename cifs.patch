@@ -1,14 +1,6 @@
 --- a/.config	2022-12-28 23:00:40.120711796 +0900
 +++ b/.config	2022-12-28 22:58:45.766114627 +0900
-@@ -1,6 +1,6 @@
- #
- # Automatically generated file; DO NOT EDIT.
--# Linux/arm64 4.9.299 Kernel Configuration
-+# Linux/arm64 4.9.299-tegra Kernel Configuration
- #
- CONFIG_ARM64=y
- CONFIG_64BIT=y
-@@ -5802,7 +5802,14 @@
+@@ -5812,7 +5812,14 @@
  #
  # Caches
  #
@@ -24,7 +16,7 @@
  
  #
  # CD-ROM/DVD Filesystems
-@@ -5915,7 +5922,9 @@
+@@ -5925,7 +5932,9 @@
  CONFIG_CIFS_DEBUG=y
  # CONFIG_CIFS_DEBUG2 is not set
  # CONFIG_CIFS_DFS_UPCALL is not set
