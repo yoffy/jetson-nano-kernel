@@ -1,0 +1,39 @@
+#!/bin/bash
+
+## requirements:
+## - sudo apt install gcc-aarch64-linux-gnu
+##     - recommended gcc-11 or earlier
+##     - many errors occured in gcc-12
+
+set -eu
+
+KERNEL_PATCH="$(pwd)/kernel.patch"
+CIFS_PATCH="$(pwd)/cifs.patch"
+
+source download-kernel.sh
+
+export DTB=tegra210-p3448-0000-p3449-0000-b00.dtb
+#export NV_BUILD_KERNEL_DTS_ROOT="$(pwd)/workdir/hardware/nvidia"
+
+export LOCALVERSION="-tegra"
+export ARCH=arm64
+
+pushd workdir
+
+patch -p1 -N < "${KERNEL_PATCH}"
+#patch -p1 -R < "${KERNEL_PATCH}"
+#exit 1
+
+echo "Configuring kernel"
+rm -f "${TEGRA_KERNEL_OUT}/.config"
+make -C ${KERNEL_DIR} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} tegra_defconfig
+pushd "${TEGRA_KERNEL_OUT}"
+patch -p1 -N < "${CIFS_PATCH}"
+popd
+
+echo "Making kernel"
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} zImage
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules
+
+popd

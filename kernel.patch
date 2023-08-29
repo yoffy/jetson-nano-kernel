@@ -1,0 +1,550 @@
+diff -ur a/kernel/kernel-4.9/drivers/net/ethernet/neterion/vxge/vxge-traffic.h b/kernel/kernel-4.9/drivers/net/ethernet/neterion/vxge/vxge-traffic.h
+--- a/kernel/kernel-4.9/drivers/net/ethernet/neterion/vxge/vxge-traffic.h	2023-06-08 01:58:20.000000000 +0900
++++ b/kernel/kernel-4.9/drivers/net/ethernet/neterion/vxge/vxge-traffic.h	2023-08-30 20:55:40.753750555 +0900
+@@ -2155,27 +2155,27 @@
+ enum vxge_hw_status
+ vxge_hw_vpath_mac_addr_add(
+ 	struct __vxge_hw_vpath_handle *vpath_handle,
+-	u8 *macaddr,
+-	u8 *macaddr_mask,
++	u8 macaddr[ETH_ALEN],
++	u8 macaddr_mask[ETH_ALEN],
+ 	enum vxge_hw_vpath_mac_addr_add_mode duplicate_mode);
+ 
+ enum vxge_hw_status
+ vxge_hw_vpath_mac_addr_get(
+ 	struct __vxge_hw_vpath_handle *vpath_handle,
+-	u8 *macaddr,
+-	u8 *macaddr_mask);
++	u8 macaddr[ETH_ALEN],
++	u8 macaddr_mask[ETH_ALEN]);
+ 
+ enum vxge_hw_status
+ vxge_hw_vpath_mac_addr_get_next(
+ 	struct __vxge_hw_vpath_handle *vpath_handle,
+-	u8 *macaddr,
+-	u8 *macaddr_mask);
++	u8 macaddr[ETH_ALEN],
++	u8 macaddr_mask[ETH_ALEN]);
+ 
+ enum vxge_hw_status
+ vxge_hw_vpath_mac_addr_delete(
+ 	struct __vxge_hw_vpath_handle *vpath_handle,
+-	u8 *macaddr,
+-	u8 *macaddr_mask);
++	u8 macaddr[ETH_ALEN],
++	u8 macaddr_mask[ETH_ALEN]);
+ 
+ enum vxge_hw_status
+ vxge_hw_vpath_vid_add(
+diff -ur a/kernel/kernel-4.9/drivers/net/wireless/ath/ath10k/wmi.c b/kernel/kernel-4.9/drivers/net/wireless/ath/ath10k/wmi.c
+--- a/kernel/kernel-4.9/drivers/net/wireless/ath/ath10k/wmi.c	2023-06-08 01:58:20.000000000 +0900
++++ b/kernel/kernel-4.9/drivers/net/wireless/ath/ath10k/wmi.c	2023-08-30 20:55:40.753750555 +0900
+@@ -5903,15 +5903,6 @@
+ 
+ int ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg *arg)
+ {
+-	if (arg->ie_len && !arg->ie)
+-		return -EINVAL;
+-	if (arg->n_channels && !arg->channels)
+-		return -EINVAL;
+-	if (arg->n_ssids && !arg->ssids)
+-		return -EINVAL;
+-	if (arg->n_bssids && !arg->bssids)
+-		return -EINVAL;
+-
+ 	if (arg->ie_len > WLAN_SCAN_PARAMS_MAX_IE_LEN)
+ 		return -EINVAL;
+ 	if (arg->n_channels > ARRAY_SIZE(arg->channels))
+diff -ur a/kernel/kernel-4.9/drivers/net/wireless/ath/ath9k/eeprom.c b/kernel/kernel-4.9/drivers/net/wireless/ath/ath9k/eeprom.c
+--- a/kernel/kernel-4.9/drivers/net/wireless/ath/ath9k/eeprom.c	2023-06-08 01:58:20.000000000 +0900
++++ b/kernel/kernel-4.9/drivers/net/wireless/ath/ath9k/eeprom.c	2023-08-30 20:55:40.753750555 +0900
+@@ -143,7 +143,7 @@
+ 
+ 	if (ah->eeprom_blob)
+ 		ret = ath9k_hw_nvram_read_firmware(ah->eeprom_blob, off, data);
+-	else if (pdata && !pdata->use_eeprom && pdata->eeprom_data)
++	else if (pdata && !pdata->use_eeprom)
+ 		ret = ath9k_hw_nvram_read_pdata(pdata, off, data);
+ 	else
+ 		ret = common->bus_ops->eeprom_read(common, off, data);
+diff -ur a/kernel/kernel-4.9/scripts/Kbuild.include b/kernel/kernel-4.9/scripts/Kbuild.include
+--- a/kernel/kernel-4.9/scripts/Kbuild.include	2023-06-08 01:58:21.000000000 +0900
++++ b/kernel/kernel-4.9/scripts/Kbuild.include	2023-08-30 21:28:45.955368456 +0900
+@@ -461,8 +461,8 @@
+ # It's a common trick to declare makefile variable that contains space
+ # we'll need it to convert the path string to list (string delimited by spaces)
+ # and vice versa
+-the-space :=
+-the-space += 
++E =
++the-space = $E $E
+ # TEGRA_ROOT_PATH is the relative path to the directory one level upper than $srctree
+ _TEGRA_ROOT_PATH = $(subst ^$(realpath $(srctree)/..)/,,^$(realpath $(kbuild-dir)))
+ # _TEGRA_REL_PATH is path like "../../../" that points to directory one level
+diff -ur a/kernel/nvidia/drivers/hid/hid-atv-jarvis.c b/kernel/nvidia/drivers/hid/hid-atv-jarvis.c
+--- a/kernel/nvidia/drivers/hid/hid-atv-jarvis.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/hid/hid-atv-jarvis.c	2023-08-30 20:55:40.753750555 +0900
+@@ -2069,7 +2069,7 @@
+ 		device_remove_file(&hdev->dev, &dev_attr_timeout);
+ 	}
+ 
+-	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE && hdev->uniq) {
++	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE) {
+ 		if (shdr_dev->last_ljsx == 0 || shdr_dev->last_ljsx == 0xffff ||
+ 		    shdr_dev->last_ljsy == 0 || shdr_dev->last_ljsy == 0xffff ||
+ 		    shdr_dev->last_rjsx == 0 || shdr_dev->last_rjsx == 0xffff ||
+diff -ur a/kernel/nvidia/drivers/net/can/mttcan/native/m_ttcan_linux.c b/kernel/nvidia/drivers/net/can/mttcan/native/m_ttcan_linux.c
+--- a/kernel/nvidia/drivers/net/can/mttcan/native/m_ttcan_linux.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/can/mttcan/native/m_ttcan_linux.c	2023-08-30 22:47:46.344981172 +0900
+@@ -22,7 +22,7 @@
+ 
+ static void mttcan_start(struct net_device *dev);
+ 
+-static __init int mttcan_hw_init(struct mttcan_priv *priv)
++static int mttcan_hw_init(struct mttcan_priv *priv)
+ {
+ 	int err = 0;
+ 	u32 ie = 0, ttie = 0, gfc_reg = 0;
+diff -ur a/kernel/nvidia/drivers/net/ethernet/realtek/r8168_n.c b/kernel/nvidia/drivers/net/ethernet/realtek/r8168_n.c
+--- a/kernel/nvidia/drivers/net/ethernet/realtek/r8168_n.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/ethernet/realtek/r8168_n.c	2023-08-30 20:55:40.757749917 +0900
+@@ -27694,7 +27694,7 @@
+         assert(tp != NULL);
+         assert(ioaddr != NULL);
+ 
+-        if ((tp->RxDescArray == NULL) || (tp->Rx_skbuff == NULL))
++        if ((tp->RxDescArray == NULL))
+                 goto rx_out;
+ 
+         rx_quota = RTL_RX_QUOTA(budget);
+diff -ur a/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_dbg.h b/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_dbg.h
+--- a/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_dbg.h	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_dbg.h	2023-08-30 20:55:40.757749917 +0900
+@@ -33,8 +33,7 @@
+ 
+ #if defined(DHD_DEBUG)
+ 
+-#define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && USE_NET_RATELIMIT) \
+-								printf args; nv_sprintf args;} while (0)
++#define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && USE_NET_RATELIMIT) printf args; nv_sprintf args;} while (0)
+ #define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) printf args;} while (0)
+ #define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) printf args;} while (0)
+ #define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) printf args;} while (0)
+diff -ur a/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_linux.c b/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_linux.c
+--- a/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_linux.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/bcmdhd/dhd_linux.c	2023-08-30 20:55:40.757749917 +0900
+@@ -3360,13 +3360,14 @@
+ 				time_lapse = jiffies - jiffies_at_start;
+ 
+ 				/* Reschedule the watchdog */
+-				if (dhd->wd_timer_valid)
++				if (dhd->wd_timer_valid) {
+ 					mod_timer(&dhd->timer,
+ 					    jiffies +
+ 					    msecs_to_jiffies(dhd_watchdog_ms) -
+ 					    min(msecs_to_jiffies(dhd_watchdog_ms), time_lapse));
+-					DHD_GENERAL_UNLOCK(&dhd->pub, flags);
+ 				}
++				DHD_GENERAL_UNLOCK(&dhd->pub, flags);
++			}
+ 		} else {
+ 			break;
+ 	}
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/efuse/rtw_efuse.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/efuse/rtw_efuse.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/efuse/rtw_efuse.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/efuse/rtw_efuse.c	2023-08-30 21:04:23.264278625 +0900
+@@ -778,13 +778,14 @@
+ 	j = 0;
+ 
+ 	for (i = 0; i < mapLen; i++) {
+-		if (i % 16 == 0)
++		if (i % 16 == 0) {
+ 			RTW_PRINT_SEL(RTW_DBGDUMP, "0x%03x: ", i);
+ 			_RTW_PRINT_SEL(RTW_DBGDUMP, "%02X%s"
+ 				, pEfuseHal->fakeEfuseInitMap[i]
+ 				, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "	  " : " ")
+ 			);
+ 		}
++	}
+ 	_RTW_PRINT_SEL(RTW_DBGDUMP, "\n");
+ 
+ out_free_buffer:
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_mlme.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_mlme.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_mlme.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_mlme.c	2023-08-30 20:55:40.757749917 +0900
+@@ -3190,13 +3190,15 @@
+ 
+ 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
+ 	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+-		#ifdef CONFIG_LAYER2_ROAMING
+-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE)
++#ifdef CONFIG_LAYER2_ROAMING
++		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
+ 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+-		else
+-		#endif
++		} else
++#endif
++		{
+ 			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+ 			goto exit;
++		}
+ 	}
+ 	else if (ssc_chk != SS_ALLOW)
+ 		goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_rf.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_rf.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_rf.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_rf.c	2023-08-30 20:58:58.855500383 +0900
+@@ -761,11 +761,12 @@
+ 	}
+ 
+ 	RTW_PRINT_SEL(sel, "txpwr_lmt_2g_cck_ofdm_state:0x%02x\n", rfctl->txpwr_lmt_2g_cck_ofdm_state);
+-	#ifdef CONFIG_IEEE80211_BAND_5GHZ
+-	if (IS_HARDWARE_TYPE_JAGUAR_AND_JAGUAR2(adapter))
++#ifdef CONFIG_IEEE80211_BAND_5GHZ
++	if (IS_HARDWARE_TYPE_JAGUAR_AND_JAGUAR2(adapter)) {
+ 		RTW_PRINT_SEL(sel, "txpwr_lmt_5g_cck_ofdm_state:0x%02x\n", rfctl->txpwr_lmt_5g_cck_ofdm_state);
+-		RTW_PRINT_SEL(sel, "txpwr_lmt_5g_20_40_ref:0x%02x\n", rfctl->txpwr_lmt_5g_20_40_ref);
+-	#endif
++	}
++	RTW_PRINT_SEL(sel, "txpwr_lmt_5g_20_40_ref:0x%02x\n", rfctl->txpwr_lmt_5g_20_40_ref);
++#endif
+ 	RTW_PRINT_SEL(sel, "\n");
+ 
+ 	for (band = BAND_ON_2_4G; band <= BAND_ON_5G; band++) {
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_wlan_util.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_wlan_util.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_wlan_util.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/core/rtw_wlan_util.c	2023-08-30 20:55:40.761749279 +0900
+@@ -3224,8 +3224,9 @@
+ 		goto exit;
+ 	else {
+ 		if(*(p+1) > 6 ) {
+-			for(i=0; i<9;i++)
++			for(i=0; i<9;i++) {
+ 				RTW_INFO("p[%d]=0x%x",i,*(p+i) );
++			}
+ 				RTW_INFO("\n");
+ 			if(*(p+6) != 2)
+ 				goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/hal/rtl8812a/usb/rtl8812au_xmit.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/hal/rtl8812a/usb/rtl8812au_xmit.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/hal/rtl8812a/usb/rtl8812au_xmit.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8812au/hal/rtl8812a/usb/rtl8812au_xmit.c	2023-08-30 21:17:19.246823203 +0900
+@@ -430,7 +430,7 @@
+ 		}
+ 		rtw_write32(adapter, REG_PKTBUF_DBG_CTRL, 0xff800000+(beacon_head<<6) + qw_addr);
+ 		loop_cnt = 0;
+-		while ((rtw_read32(adapter, REG_PKTBUF_DBG_CTRL) & BIT23) == 1) {
++		while ((rtw_read32(adapter, REG_PKTBUF_DBG_CTRL) & BIT23) != 0) {
+ 			rtw_udelay_os(10);
+ 			if (loop_cnt++ == 100)
+ 				return _FALSE;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/efuse/rtw_efuse.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/efuse/rtw_efuse.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/efuse/rtw_efuse.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/efuse/rtw_efuse.c	2023-08-30 21:00:29.462098499 +0900
+@@ -902,13 +902,14 @@
+ 	j = 0;
+ 
+ 	for (i = 0; i < mapLen; i++) {
+-		if (i % 16 == 0)
++		if (i % 16 == 0) {
+ 			RTW_PRINT_SEL(RTW_DBGDUMP, "0x%03x: ", i);
+ 			_RTW_PRINT_SEL(RTW_DBGDUMP, "%02X%s"
+ 				, pEfuseHal->fakeEfuseInitMap[i]
+ 				, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "	  " : " ")
+ 			);
+ 		}
++	}
+ 	_RTW_PRINT_SEL(RTW_DBGDUMP, "\n");
+ 
+ out_free_buffer:
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_mlme.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_mlme.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_mlme.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_mlme.c	2023-08-30 20:55:40.761749279 +0900
+@@ -3124,13 +3124,15 @@
+ 
+ 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
+ 	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+-		#ifdef CONFIG_LAYER2_ROAMING
+-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE)
++#ifdef CONFIG_LAYER2_ROAMING
++		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
+ 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+-		else
+-		#endif
++		} else
++#endif
++		{
+ 			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+ 			goto exit;
++		}
+ 	}
+ 	else if (ssc_chk != SS_ALLOW)
+ 		goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_recv.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_recv.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_recv.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8814au/core/rtw_recv.c	2023-08-30 20:55:40.761749279 +0900
+@@ -3572,9 +3572,10 @@
+ 			int i;
+ 			RTW_INFO("############ type:0x%02x subtype:0x%02x #################\n", type, subtype);
+ 
+-			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8)
++			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8) {
+ 				RTW_INFO("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr + i),
+ 					*(ptr + i + 1), *(ptr + i + 2) , *(ptr + i + 3) , *(ptr + i + 4), *(ptr + i + 5), *(ptr + i + 6), *(ptr + i + 7));
++			}
+ 				RTW_INFO("#############################\n");
+ 				_rtw_memset(pmppriv->mplink_buf, '\0' , sizeof(pmppriv->mplink_buf));
+ 				_rtw_memcpy(pmppriv->mplink_buf, ptr, precv_frame->u.hdr.len);
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/efuse/rtw_efuse.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/efuse/rtw_efuse.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/efuse/rtw_efuse.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/efuse/rtw_efuse.c	2023-08-30 21:14:18.656473137 +0900
+@@ -902,13 +902,14 @@
+ 	j = 0;
+ 
+ 	for (i = 0; i < mapLen; i++) {
+-		if (i % 16 == 0)
++		if (i % 16 == 0) {
+ 			RTW_PRINT_SEL(RTW_DBGDUMP, "0x%03x: ", i);
+ 			_RTW_PRINT_SEL(RTW_DBGDUMP, "%02X%s"
+ 				, pEfuseHal->fakeEfuseInitMap[i]
+ 				, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "	  " : " ")
+ 			);
+ 		}
++	}
+ 	_RTW_PRINT_SEL(RTW_DBGDUMP, "\n");
+ 
+ out_free_buffer:
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_mlme.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_mlme.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_mlme.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_mlme.c	2023-08-30 20:55:40.761749279 +0900
+@@ -3134,13 +3134,15 @@
+ 
+ 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
+ 	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+-		#ifdef CONFIG_LAYER2_ROAMING
+-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE)
++#ifdef CONFIG_LAYER2_ROAMING
++		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
+ 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+-		else
+-		#endif
++		} else
++#endif
++		{
+ 			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+ 			goto exit;
++		}
+ 	}
+ 	else if (ssc_chk != SS_ALLOW)
+ 		goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_recv.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_recv.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_recv.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821au/core/rtw_recv.c	2023-08-30 21:03:41.124191742 +0900
+@@ -3572,9 +3572,10 @@
+ 			int i;
+ 			RTW_INFO("############ type:0x%02x subtype:0x%02x #################\n", type, subtype);
+ 
+-			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8)
++			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8) {
+ 				RTW_INFO("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr + i),
+ 					*(ptr + i + 1), *(ptr + i + 2) , *(ptr + i + 3) , *(ptr + i + 4), *(ptr + i + 5), *(ptr + i + 6), *(ptr + i + 7));
++			}
+ 				RTW_INFO("#############################\n");
+ 				_rtw_memset(pmppriv->mplink_buf, '\0' , sizeof(pmppriv->mplink_buf));
+ 				_rtw_memcpy(pmppriv->mplink_buf, ptr, precv_frame->u.hdr.len);
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/efuse/rtw_efuse.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/efuse/rtw_efuse.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/efuse/rtw_efuse.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/efuse/rtw_efuse.c	2023-08-30 21:18:16.069205500 +0900
+@@ -902,13 +902,14 @@
+ 	j = 0;
+ 
+ 	for (i = 0; i < mapLen; i++) {
+-		if (i % 16 == 0)
++		if (i % 16 == 0) {
+ 			RTW_PRINT_SEL(RTW_DBGDUMP, "0x%03x: ", i);
+ 			_RTW_PRINT_SEL(RTW_DBGDUMP, "%02X%s"
+ 				, pEfuseHal->fakeEfuseInitMap[i]
+ 				, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "	  " : " ")
+ 			);
+ 		}
++	}
+ 	_RTW_PRINT_SEL(RTW_DBGDUMP, "\n");
+ 
+ out_free_buffer:
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_mlme.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_mlme.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_mlme.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_mlme.c	2023-08-30 21:01:29.501532505 +0900
+@@ -3122,13 +3122,15 @@
+ 
+ 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
+ 	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+-		#ifdef CONFIG_LAYER2_ROAMING
+-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE)
++#ifdef CONFIG_LAYER2_ROAMING
++		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
+ 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+-		else
+-		#endif
++		} else
++#endif
++		{
+ 			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+ 			goto exit;
++		}
+ 	}
+ 	else if (ssc_chk != SS_ALLOW)
+ 		goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_recv.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_recv.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_recv.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8821cu/core/rtw_recv.c	2023-08-30 21:13:38.221890041 +0900
+@@ -3572,9 +3572,10 @@
+ 			int i;
+ 			RTW_INFO("############ type:0x%02x subtype:0x%02x #################\n", type, subtype);
+ 
+-			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8)
++			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8) {
+ 				RTW_INFO("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr + i),
+ 					*(ptr + i + 1), *(ptr + i + 2) , *(ptr + i + 3) , *(ptr + i + 4), *(ptr + i + 5), *(ptr + i + 6), *(ptr + i + 7));
++			}
+ 				RTW_INFO("#############################\n");
+ 				_rtw_memset(pmppriv->mplink_buf, '\0' , sizeof(pmppriv->mplink_buf));
+ 				_rtw_memcpy(pmppriv->mplink_buf, ptr, precv_frame->u.hdr.len);
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/efuse/rtw_efuse.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/efuse/rtw_efuse.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/efuse/rtw_efuse.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/efuse/rtw_efuse.c	2023-08-30 21:17:56.749749171 +0900
+@@ -902,13 +902,14 @@
+ 	j = 0;
+ 
+ 	for (i = 0; i < mapLen; i++) {
+-		if (i % 16 == 0)
++		if (i % 16 == 0) {
+ 			RTW_PRINT_SEL(RTW_DBGDUMP, "0x%03x: ", i);
+ 			_RTW_PRINT_SEL(RTW_DBGDUMP, "%02X%s"
+ 				, pEfuseHal->fakeEfuseInitMap[i]
+ 				, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "	  " : " ")
+ 			);
+ 		}
++	}
+ 	_RTW_PRINT_SEL(RTW_DBGDUMP, "\n");
+ 
+ out_free_buffer:
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_mlme.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_mlme.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_mlme.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_mlme.c	2023-08-30 21:04:53.640211302 +0900
+@@ -3448,13 +3448,15 @@
+ 
+ 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
+ 	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+-		#ifdef CONFIG_LAYER2_ROAMING
+-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE)
++#ifdef CONFIG_LAYER2_ROAMING
++		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
+ 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+-		else
+-		#endif
++		} else
++#endif
++		{
+ 			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+ 			goto exit;
++		}
+ 	}
+ 	else if (ssc_chk != SS_ALLOW)
+ 		goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_recv.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_recv.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_recv.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822bu/core/rtw_recv.c	2023-08-30 21:14:37.407838975 +0900
+@@ -3572,9 +3572,10 @@
+ 			int i;
+ 			RTW_INFO("############ type:0x%02x subtype:0x%02x #################\n", type, subtype);
+ 
+-			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8)
++			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8) {
+ 				RTW_INFO("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr + i),
+ 					*(ptr + i + 1), *(ptr + i + 2) , *(ptr + i + 3) , *(ptr + i + 4), *(ptr + i + 5), *(ptr + i + 6), *(ptr + i + 7));
++			}
+ 				RTW_INFO("#############################\n");
+ 				_rtw_memset(pmppriv->mplink_buf, '\0' , sizeof(pmppriv->mplink_buf));
+ 				_rtw_memcpy(pmppriv->mplink_buf, ptr, precv_frame->u.hdr.len);
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/efuse/rtw_efuse.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/efuse/rtw_efuse.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/efuse/rtw_efuse.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/efuse/rtw_efuse.c	2023-08-30 21:18:35.268671068 +0900
+@@ -898,13 +898,14 @@
+ 	j = 0;
+ 
+ 	for (i = 0; i < mapLen; i++) {
+-		if (i % 16 == 0)
++		if (i % 16 == 0) {
+ 			RTW_PRINT_SEL(RTW_DBGDUMP, "0x%03x: ", i);
+ 			_RTW_PRINT_SEL(RTW_DBGDUMP, "%02X%s"
+ 				, pEfuseHal->fakeEfuseInitMap[i]
+ 				, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "	  " : " ")
+ 			);
+ 		}
++	}
+ 	_RTW_PRINT_SEL(RTW_DBGDUMP, "\n");
+ 
+ out_free_buffer:
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_mlme.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_mlme.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_mlme.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_mlme.c	2023-08-30 21:05:24.088060508 +0900
+@@ -3133,13 +3133,15 @@
+ 
+ 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
+ 	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+-		#ifdef CONFIG_LAYER2_ROAMING
+-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE)
++#ifdef CONFIG_LAYER2_ROAMING
++		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
+ 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+-		else
+-		#endif
++		} else
++#endif
++		{
+ 			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+ 			goto exit;
++		}
+ 	}
+ 	else if (ssc_chk != SS_ALLOW)
+ 		goto exit;
+diff -ur a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_recv.c b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_recv.c
+--- a/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_recv.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/net/wireless/realtek/rtl8822ce/core/rtw_recv.c	2023-08-30 21:13:57.589202501 +0900
+@@ -3555,9 +3555,10 @@
+ 			int i;
+ 			RTW_INFO("############ type:0x%02x subtype:0x%02x #################\n", type, subtype);
+ 
+-			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8)
++			for (i = 0; i < precv_frame->u.hdr.len; i = i + 8) {
+ 				RTW_INFO("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr + i),
+ 					*(ptr + i + 1), *(ptr + i + 2) , *(ptr + i + 3) , *(ptr + i + 4), *(ptr + i + 5), *(ptr + i + 6), *(ptr + i + 7));
++			}
+ 				RTW_INFO("#############################\n");
+ 				_rtw_memset(pmppriv->mplink_buf, '\0' , sizeof(pmppriv->mplink_buf));
+ 				_rtw_memcpy(pmppriv->mplink_buf, ptr, precv_frame->u.hdr.len);
+diff -ur a/kernel/nvidia/drivers/platform/tegra/rtcpu/vi-notify.c b/kernel/nvidia/drivers/platform/tegra/rtcpu/vi-notify.c
+--- a/kernel/nvidia/drivers/platform/tegra/rtcpu/vi-notify.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/platform/tegra/rtcpu/vi-notify.c	2023-08-30 20:55:40.761749279 +0900
+@@ -474,7 +474,7 @@
+ 	if (vi_pdev == NULL)
+ 		return ERR_PTR(-EPROBE_DEFER);
+ 
+-	if (&vi_pdev->dev.driver == NULL) {
++	if (vi_pdev->dev.driver == NULL) {
+ 		platform_device_put(vi_pdev);
+ 		return ERR_PTR(-EPROBE_DEFER);
+ 	}
+diff -ur a/kernel/nvidia/drivers/platform/tegra/tegra-camera-rtcpu.c b/kernel/nvidia/drivers/platform/tegra/tegra-camera-rtcpu.c
+--- a/kernel/nvidia/drivers/platform/tegra/tegra-camera-rtcpu.c	2023-06-08 01:58:22.000000000 +0900
++++ b/kernel/nvidia/drivers/platform/tegra/tegra-camera-rtcpu.c	2023-08-30 20:55:40.761749279 +0900
+@@ -1132,7 +1132,7 @@
+ 	if (pdev == NULL)
+ 		return ERR_PTR(-EPROBE_DEFER);
+ 
+-	if (&pdev->dev.driver == NULL) {
++	if (pdev->dev.driver == NULL) {
+ 		platform_device_put(pdev);
+ 		return ERR_PTR(-EPROBE_DEFER);
+ 	}

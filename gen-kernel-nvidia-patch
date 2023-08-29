@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -eu
+
+LANG=C diff -ur workdir/kernel/ b/kernel/ | grep -v -E '^Only in' > kernel.patch
