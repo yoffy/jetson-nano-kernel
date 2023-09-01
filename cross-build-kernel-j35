@@ -1,0 +1,50 @@
+#!/bin/bash
+
+## requirements:
+## - sudo apt install gcc-aarch64-linux-gnu bison flex libelf-dev libssl-dev libncurses5-dev
+##     - recommended gcc-11 or earlier
+##     - many errors occured in gcc-12
+
+set -eu
+
+KERNEL_PATCH="$(pwd)/kernel-j35.patch"
+#CIFS_PATCH="$(pwd)/cifs.patch"
+
+WORKDIR_J35="$(pwd)/workdir-j35"
+WORKDIR_J32="$(pwd)/a"
+TEGRA_KERNEL_OUT="${WORKDIR_J35}/out"
+KERNEL_DIR="${WORKDIR_J35}/kernel/kernel-5.10"
+
+export DTB=tegra210-p3448-0000-p3449-0000-b00.dtb
+
+export LOCALVERSION="-tegra"
+export ARCH=arm64
+
+cp -r "${WORKDIR_J32}/hardware/nvidia/platform/t210" "${WORKDIR_J35}/hardware/nvidia/platform/"
+cp -r "${WORKDIR_J32}/hardware/nvidia/soc/t210" "${WORKDIR_J35}/hardware/nvidia/soc/"
+
+
+pushd "${WORKDIR_J35}"
+
+#patch -p1 -N < "${KERNEL_PATCH}"
+#patch -p1 -R < "${KERNEL_PATCH}"
+#exit 1
+
+echo "Configuring kernel"
+rm -f "${TEGRA_KERNEL_OUT}/.config"
+make -C ${KERNEL_DIR} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} tegra_defconfig
+pushd "${TEGRA_KERNEL_OUT}"
+#patch -p1 -N < "${CIFS_PATCH}"
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8822CE
+popd
+
+echo "Making kernel"
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} Image
+
+#echo "Making dtbs"
+#make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
+
+echo "Making modules"
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules
+
+popd

@@ -1,0 +1,396 @@
+diff -ur a/kernel/nvethernetrm/osi/common/common.h b/kernel/nvethernetrm/osi/common/common.h
+--- a/kernel/nvethernetrm/osi/common/common.h	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvethernetrm/osi/common/common.h	2023-09-01 00:12:23.233921173 +0900
+@@ -24,6 +24,7 @@
+ 
+ #include <nvethernet_type.h>
+ #include <osi_common.h>
++#include "eventlib/utility.h"
+ 
+ /**
+  * @addtogroup Generic helper MACROS
+@@ -124,7 +125,7 @@
+ 	/* __sync_val_compare_and_swap(lock, old value, new value) returns the
+ 	 * old value if successful.
+ 	 */
+-	while (__sync_val_compare_and_swap(lock, OSI_UNLOCKED, OSI_LOCKED) !=
++	while (tracebuf_sync_sync_val_compare_and_swap_u32(lock, OSI_UNLOCKED, OSI_LOCKED) !=
+ 	      OSI_UNLOCKED) {
+ 		/* Spinning.
+ 		 * Will deadlock if any ISR tried to lock again.
+@@ -153,7 +154,7 @@
+  */
+ static inline void osi_unlock_irq_enabled(nveu32_t *lock)
+ {
+-	if (__sync_val_compare_and_swap(lock, OSI_LOCKED, OSI_UNLOCKED) !=
++	if (tracebuf_sync_sync_val_compare_and_swap_u32(lock, OSI_LOCKED, OSI_UNLOCKED) !=
+ 	    OSI_LOCKED) {
+ 		/* Do nothing. Already unlocked */
+ 	}
+diff -ur a/kernel/nvethernetrm/osi/core/eqos_core.c b/kernel/nvethernetrm/osi/core/eqos_core.c
+--- a/kernel/nvethernetrm/osi/core/eqos_core.c	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvethernetrm/osi/core/eqos_core.c	2023-09-01 20:47:24.927573365 +0900
+@@ -28,6 +28,7 @@
+ #include "core_local.h"
+ #include "core_common.h"
+ #include "macsec.h"
++#include "eventlib/utility.h"
+ 
+ #ifdef UPDATED_PAD_CAL
+ /*
+@@ -166,7 +167,7 @@
+ 	nve32_t cond = COND_NOT_MET, ret = 0;
+ 	nveu32_t value;
+ 
+-	__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
++	tracebuf_sync_sync_val_compare_and_swap_u32(&osi_core->padctrl.is_pad_cal_in_progress,
+ 				    OSI_DISABLE, OSI_ENABLE);
+ 	ret = eqos_pre_pad_calibrate(osi_core);
+ 	if (ret < 0) {
+@@ -226,7 +227,7 @@
+ 	osi_writela(osi_core, value, (nveu8_t *)ioaddr + EQOS_PAD_CRTL);
+ 	ret = eqos_post_pad_calibrate(osi_core) < 0 ? -1 : ret;
+ error:
+-	__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
++	tracebuf_sync_sync_val_compare_and_swap_u32(&osi_core->padctrl.is_pad_cal_in_progress,
+ 				    OSI_ENABLE, OSI_DISABLE);
+ 
+ 	return ret;
+diff -ur a/kernel/nvethernetrm/osi/core/mgbe_core.c b/kernel/nvethernetrm/osi/core/mgbe_core.c
+--- a/kernel/nvethernetrm/osi/core/mgbe_core.c	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvethernetrm/osi/core/mgbe_core.c	2023-08-31 23:55:37.719397277 +0900
+@@ -30,6 +30,7 @@
+ #include "mgbe_mmc.h"
+ #include "core_common.h"
+ #include "macsec.h"
++#include "eventlib/utility.h"
+ 
+ /**
+  * @brief mgbe_poll_for_mac_accrtl - Poll for Indirect Access control and status
+@@ -2257,9 +2258,9 @@
+ 	if ((mac_isr & MGBE_ISR_TSIS) == MGBE_ISR_TSIS) {
+ 		struct osi_core_tx_ts *head = &l_core->tx_ts_head;
+ 
+-		if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
++		if (tracebuf_sync_fetch_and_add_u32(&l_core->ts_lock, 1) == 1U) {
+ 			/* mask return as initial value is returned always */
+-			(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++			(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ #ifndef OSI_STRIPPED_LIB
+ 			osi_core->stats.ts_lock_add_fail =
+ 				osi_update_stats_counter(osi_core->stats.ts_lock_add_fail, 1U);
+@@ -2306,7 +2307,7 @@
+ 		}
+ 
+ 		/* mask return as initial value is returned always */
+-		(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++		(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ 	}
+ done:
+ 	return;
+diff -ur a/kernel/nvethernetrm/osi/core/osi_hal.c b/kernel/nvethernetrm/osi/core/osi_hal.c
+--- a/kernel/nvethernetrm/osi/core/osi_hal.c	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvethernetrm/osi/core/osi_hal.c	2023-08-31 23:56:45.583913751 +0900
+@@ -34,6 +34,7 @@
+ #ifndef OSI_STRIPPED_LIB
+ #include "vlan_filter.h"
+ #endif
++#include "eventlib/utility.h"
+ /**
+  * @brief g_ops - Static core operations array.
+  */
+@@ -1778,9 +1779,9 @@
+ 	common_get_systime_from_mac(osi_core->base, osi_core->mac, &sec, &nsec);
+ 	ts_val = (sec * OSI_NSEC_PER_SEC) + nsec;
+ 
+-	if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
++	if (tracebuf_sync_fetch_and_add_u32(&l_core->ts_lock, 1) == 1U) {
+ 		/* mask return as initial value is returned always */
+-		(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++		(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ #ifndef OSI_STRIPPED_LIB
+ 		osi_core->stats.ts_lock_del_fail =
+ 				osi_update_stats_counter(
+@@ -1826,7 +1827,7 @@
+ 	}
+ 
+ 	/* mask return as initial value is returned always */
+-	(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++	(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ done:
+ 	return ret;
+ }
+diff -ur a/kernel/nvidia/drivers/misc/eventlib/eventlib_flt.h b/kernel/nvidia/drivers/misc/eventlib/eventlib_flt.h
+--- a/kernel/nvidia/drivers/misc/eventlib/eventlib_flt.h	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/misc/eventlib/eventlib_flt.h	2023-09-01 21:21:36.297243933 +0900
+@@ -157,17 +157,17 @@
+ 
+ static inline bool sync_test_and_set_bit(unsigned int n, uint32_t *p)
+ {
+-	return !!(__sync_fetch_and_or(p, (1u << n)) & (1u << n));
++	return !!(tracebuf_sync_fetch_and_or_u32(p, (1u << n)) & (1u << n));
+ }
+ 
+ static inline void sync_set_bit(unsigned int n, uint32_t *p)
+ {
+-	__sync_fetch_and_or(p, (1u << n));
++	tracebuf_sync_fetch_and_or_u32(p, (1u << n));
+ }
+ 
+ static inline void sync_clear_bit(unsigned int n, uint32_t *p)
+ {
+-	__sync_fetch_and_and(p, ~(1u << n));
++	tracebuf_sync_fetch_and_and_u32(p, ~(1u << n));
+ }
+ 
+ /* Below functions are implemented by the filter subsystem interface.
+diff -ur a/kernel/nvidia/drivers/misc/eventlib/utility.h b/kernel/nvidia/drivers/misc/eventlib/utility.h
+--- a/kernel/nvidia/drivers/misc/eventlib/utility.h	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/misc/eventlib/utility.h	2023-09-01 20:45:28.020669901 +0900
+@@ -125,4 +125,113 @@
+ 	return prev;
+ }
+ 
++#if defined(__aarch64__) && defined(__GNUC__) && (__GNUC__ >= 11)
++
++static inline uint32_t
++tracebuf_sync_fetch_and_or_u32(uint32_t *ptr, uint32_t value)
++{
++	uint32_t result, tmp, flags = 0;
++
++	asm volatile(
++		"1:	ldxr %w[result], [%[ptr]]\n"
++		"	orr %w[tmp], %w[result], %w[value]\n"
++		"	stlxr %w[flags], %w[tmp], [%[ptr]]\n"
++		"	cbnz %w[flags], 1b\n"
++		"	dmb ish"
++		: [result] "=&r"(result), [tmp] "=&r"(tmp)
++		: [value] "r"(value), [flags] "r"(flags), [ptr] "r"(ptr)
++		: "cc", "memory");
++
++	return result;
++}
++
++static inline uint32_t
++tracebuf_sync_fetch_and_and_u32(uint32_t *ptr, uint32_t value)
++{
++	uint32_t result, tmp, flags = 0;
++
++	asm volatile(
++		"1:	ldxr %w[result], [%[ptr]]\n"
++		"	and %w[tmp], %w[result], %w[value]\n"
++		"	stlxr %w[flags], %w[tmp], [%[ptr]]\n"
++		"	cbnz %w[flags], 1b\n"
++		"	dmb ish"
++		: [result] "=&r"(result), [tmp] "=&r"(tmp)
++		: [value] "r"(value), [flags] "r"(flags), [ptr] "r"(ptr)
++		: "cc", "memory");
++
++	return result;
++}
++
++static inline uint32_t
++tracebuf_sync_fetch_and_add_u32(uint32_t *ptr, uint32_t value)
++{
++	uint32_t result, tmp, flags = 0;
++
++	asm volatile(
++		"1:	ldxr %w[result], [%[ptr]]\n"
++		"	add %w[tmp], %w[result], %w[value]\n"
++		"	stlxr %w[flags], %w[tmp], [%[ptr]]\n"
++		"	cbnz %w[flags], 1b\n"
++		"	dmb ish"
++		: [result] "=&r"(result), [tmp] "=&r"(tmp)
++		: [value] "r"(value), [flags] "r"(flags), [ptr] "r"(ptr)
++		: "cc", "memory");
++
++	return result;
++}
++
++static inline uint32_t
++tracebuf_sync_fetch_and_sub_u32(uint32_t *ptr, uint32_t value)
++{
++	uint32_t result, tmp, flags = 0;
++
++	asm volatile(
++		"1:	ldxr %w[result], [%[ptr]]\n"
++		"	sub %w[tmp], %w[result], %w[value]\n"
++		"	stlxr %w[flags], %w[tmp], [%[ptr]]\n"
++		"	cbnz %w[flags], 1b\n"
++		"	dmb ish"
++		: [result] "=&r"(result), [tmp] "=&r"(tmp)
++		: [value] "r"(value), [flags] "r"(flags), [ptr] "r"(ptr)
++		: "cc", "memory");
++
++	return result;
++}
++
++static inline uint32_t
++tracebuf_sync_sync_val_compare_and_swap_u32(uint32_t *ptr, uint32_t comp, uint32_t exch)
++{
++	uint32_t result, flags = 0;
++
++	asm volatile(
++		"1:	ldxr %w[result], [%[ptr]]\n"
++		"	cmp %w[result], %w[comp]\n"
++		"	b.ne 1f\n"
++		"	stlxr %w[flags], %w[exch], [%[ptr]]\n"
++		"	cbnz %w[flags], 1b\n"
++		"1:	dmb ish"
++		: [result] "=&r"(result), [exch] "=&r"(exch)
++		: [comp] "r"(comp), [flags] "r"(flags), [ptr] "r"(ptr)
++		: "cc", "memory");
++
++	return result;
++}
++
++#else
++
++static inline uint32_t
++tracebuf_sync_fetch_and_or_u32(uint32_t *ptr, uint32_t value)
++{
++	return __sync_fetch_and_or(ptr, value);
++}
++
++static inline uint32_t
++tracebuf_sync_fetch_and_and_u32(uint32_t *ptr, uint32_t value)
++{
++	return __sync_fetch_and_and(ptr, value);
++}
++
++#endif
++
+ #endif
+diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/Makefile b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/Makefile
+--- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/Makefile	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/Makefile	2023-08-31 23:54:28.630852099 +0900
+@@ -22,6 +22,7 @@
+ 
+ # These CFLAGS must not be shared/used in OSI. These are local to Linux
+ ccflags-y +=  -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC -DUPDATED_PAD_CAL \
++              -I$(srctree.nvidia)/drivers/misc \
+               -I$(srctree.nvidia)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include \
+ 	     -I$(srctree.nvidia)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/include
+ 
+diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h
+--- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h	2023-09-01 00:12:23.233921173 +0900
+@@ -24,6 +24,7 @@
+ 
+ #include <nvethernet_type.h>
+ #include <osi_common.h>
++#include "eventlib/utility.h"
+ 
+ /**
+  * @addtogroup Generic helper MACROS
+@@ -124,7 +125,7 @@
+ 	/* __sync_val_compare_and_swap(lock, old value, new value) returns the
+ 	 * old value if successful.
+ 	 */
+-	while (__sync_val_compare_and_swap(lock, OSI_UNLOCKED, OSI_LOCKED) !=
++	while (tracebuf_sync_sync_val_compare_and_swap_u32(lock, OSI_UNLOCKED, OSI_LOCKED) !=
+ 	      OSI_UNLOCKED) {
+ 		/* Spinning.
+ 		 * Will deadlock if any ISR tried to lock again.
+@@ -153,7 +154,7 @@
+  */
+ static inline void osi_unlock_irq_enabled(nveu32_t *lock)
+ {
+-	if (__sync_val_compare_and_swap(lock, OSI_LOCKED, OSI_UNLOCKED) !=
++	if (tracebuf_sync_sync_val_compare_and_swap_u32(lock, OSI_LOCKED, OSI_UNLOCKED) !=
+ 	    OSI_LOCKED) {
+ 		/* Do nothing. Already unlocked */
+ 	}
+diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c
+--- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c	2023-09-01 20:47:24.927573365 +0900
+@@ -28,6 +28,7 @@
+ #include "core_local.h"
+ #include "core_common.h"
+ #include "macsec.h"
++#include "eventlib/utility.h"
+ 
+ #ifdef UPDATED_PAD_CAL
+ /*
+@@ -166,7 +167,7 @@
+ 	nve32_t cond = COND_NOT_MET, ret = 0;
+ 	nveu32_t value;
+ 
+-	__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
++	tracebuf_sync_sync_val_compare_and_swap_u32(&osi_core->padctrl.is_pad_cal_in_progress,
+ 				    OSI_DISABLE, OSI_ENABLE);
+ 	ret = eqos_pre_pad_calibrate(osi_core);
+ 	if (ret < 0) {
+@@ -226,7 +227,7 @@
+ 	osi_writela(osi_core, value, (nveu8_t *)ioaddr + EQOS_PAD_CRTL);
+ 	ret = eqos_post_pad_calibrate(osi_core) < 0 ? -1 : ret;
+ error:
+-	__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
++	tracebuf_sync_sync_val_compare_and_swap_u32(&osi_core->padctrl.is_pad_cal_in_progress,
+ 				    OSI_ENABLE, OSI_DISABLE);
+ 
+ 	return ret;
+diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c
+--- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c	2023-08-31 23:55:37.719397277 +0900
+@@ -30,6 +30,7 @@
+ #include "mgbe_mmc.h"
+ #include "core_common.h"
+ #include "macsec.h"
++#include "eventlib/utility.h"
+ 
+ /**
+  * @brief mgbe_poll_for_mac_accrtl - Poll for Indirect Access control and status
+@@ -2257,9 +2258,9 @@
+ 	if ((mac_isr & MGBE_ISR_TSIS) == MGBE_ISR_TSIS) {
+ 		struct osi_core_tx_ts *head = &l_core->tx_ts_head;
+ 
+-		if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
++		if (tracebuf_sync_fetch_and_add_u32(&l_core->ts_lock, 1) == 1U) {
+ 			/* mask return as initial value is returned always */
+-			(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++			(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ #ifndef OSI_STRIPPED_LIB
+ 			osi_core->stats.ts_lock_add_fail =
+ 				osi_update_stats_counter(osi_core->stats.ts_lock_add_fail, 1U);
+@@ -2306,7 +2307,7 @@
+ 		}
+ 
+ 		/* mask return as initial value is returned always */
+-		(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++		(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ 	}
+ done:
+ 	return;
+diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c
+--- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c	2023-08-02 04:31:24.000000000 +0900
++++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c	2023-08-31 23:56:45.583913751 +0900
+@@ -34,6 +34,7 @@
+ #ifndef OSI_STRIPPED_LIB
+ #include "vlan_filter.h"
+ #endif
++#include "eventlib/utility.h"
+ /**
+  * @brief g_ops - Static core operations array.
+  */
+@@ -1778,9 +1779,9 @@
+ 	common_get_systime_from_mac(osi_core->base, osi_core->mac, &sec, &nsec);
+ 	ts_val = (sec * OSI_NSEC_PER_SEC) + nsec;
+ 
+-	if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
++	if (tracebuf_sync_fetch_and_add_u32(&l_core->ts_lock, 1) == 1U) {
+ 		/* mask return as initial value is returned always */
+-		(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++		(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ #ifndef OSI_STRIPPED_LIB
+ 		osi_core->stats.ts_lock_del_fail =
+ 				osi_update_stats_counter(
+@@ -1826,7 +1827,7 @@
+ 	}
+ 
+ 	/* mask return as initial value is returned always */
+-	(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
++	(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
+ done:
+ 	return ret;
+ }
