@@ -13,16 +13,22 @@ KERNEL_PATCH="$(pwd)/kernel-j35.patch"
 WORKDIR_J35="$(pwd)/workdir-j35"
 WORKDIR_J32="$(pwd)/a"
 TEGRA_KERNEL_OUT="${WORKDIR_J35}/out"
+TEGRA_KERNEL_OUT_J32="$(pwd)/workdir/out"
 KERNEL_DIR="${WORKDIR_J35}/kernel/kernel-5.10"
 
 export DTB=tegra210-p3448-0000-p3449-0000-b00.dtb
 
 export LOCALVERSION="-tegra"
 export ARCH=arm64
+export INSTALL_MOD_PATH="${WORKDIR_J35}/modules"
 
 cp -r "${WORKDIR_J32}/hardware/nvidia/platform/t210" "${WORKDIR_J35}/hardware/nvidia/platform/"
 cp -r "${WORKDIR_J32}/hardware/nvidia/soc/t210" "${WORKDIR_J35}/hardware/nvidia/soc/"
-
+cp "${WORKDIR_J32}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/clock/tegra210-car.h" "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/clock/"
+rm -rf "${WORKDIR_J35}/hardware/nvidia/soc/"{t19x,t23x}
+rm -rf "${WORKDIR_J35}/hardware/nvidia/platform/"{t19x,t23x}
+sed -i -E '/^#define TEGRA_SWGROUP_/d' "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/memory/tegra210-mc.h"
+#cp "${WORKDIR_J32}/kernel/kernel-4.9/arch/arm64/configs/tegra_defconfig" "${WORKDIR_J35}/kernel/kernel-5.10/arch/arm64/configs/"
 
 pushd "${WORKDIR_J35}"
 
@@ -33,18 +39,39 @@ pushd "${WORKDIR_J35}"
 echo "Configuring kernel"
 rm -f "${TEGRA_KERNEL_OUT}/.config"
 make -C ${KERNEL_DIR} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} tegra_defconfig
+#mkdir -p "${TEGRA_KERNEL_OUT}"
+#cp "${TEGRA_KERNEL_OUT_J32}/.config" "${TEGRA_KERNEL_OUT}/"
+
 pushd "${TEGRA_KERNEL_OUT}"
 #patch -p1 -N < "${CIFS_PATCH}"
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8187
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8187_LEDS
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8188EE
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8821AE
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI_PCI
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI_USB
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI_DEBUG
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8812AU
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8814AU
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8821AU
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8821CU
+"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8822BU
+
 "${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8822CE
+"${KERNEL_DIR}"/scripts/config --enable CONFIG_ARCH_TEGRA_21x_SOC
 popd
 
 echo "Making kernel"
 make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} Image
 
-#echo "Making dtbs"
-#make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
+echo "Making dtbs"
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
 
 echo "Making modules"
 make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules
+
+mkdir -p "${INSTALL_MOD_PATH}"
+make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules_install
 
 popd
