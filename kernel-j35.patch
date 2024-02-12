@@ -272,125 +272,96 @@ diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/Makefile b/kerne
                -I$(srctree.nvidia)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include \
  	     -I$(srctree.nvidia)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/include
  
-diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h
---- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h	2023-08-02 04:31:24.000000000 +0900
-+++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/common.h	2023-09-01 00:12:23.233921173 +0900
-@@ -24,6 +24,7 @@
+diff -ur a/kernel/kernel-5.10/drivers/clocksource/timer-tegra.c b/kernel/kernel-5.10/drivers/clocksource/timer-tegra.c
+--- a/kernel/kernel-5.10/drivers/clocksource/timer-tegra.c	2023-08-02 04:31:09.000000000 +0900
++++ b/kernel/kernel-5.10/drivers/clocksource/timer-tegra.c	2024-02-12 21:35:20.397210530 +0900
+@@ -48,6 +48,12 @@
  
- #include <nvethernet_type.h>
- #include <osi_common.h>
-+#include "eventlib/utility.h"
+ #define TIMER_1MHz		1000000
  
- /**
-  * @addtogroup Generic helper MACROS
-@@ -124,7 +125,7 @@
- 	/* __sync_val_compare_and_swap(lock, old value, new value) returns the
- 	 * old value if successful.
- 	 */
--	while (__sync_val_compare_and_swap(lock, OSI_UNLOCKED, OSI_LOCKED) !=
-+	while (tracebuf_sync_sync_val_compare_and_swap_u32(lock, OSI_UNLOCKED, OSI_LOCKED) !=
- 	      OSI_UNLOCKED) {
- 		/* Spinning.
- 		 * Will deadlock if any ISR tried to lock again.
-@@ -153,7 +154,7 @@
-  */
- static inline void osi_unlock_irq_enabled(nveu32_t *lock)
++enum tegra_id_t {
++	tegra_default,
++	tegra20,
++	tegra210,
++};
++
+ static u32 usec_config;
+ static void __iomem *timer_reg_base;
+ 
+@@ -209,9 +215,9 @@
+ 	.flags	= CLOCK_SOURCE_IS_CONTINUOUS | CLOCK_SOURCE_SUSPEND_NONSTOP,
+ };
+ 
+-static inline unsigned int tegra_base_for_cpu(int cpu, bool tegra20)
++static inline unsigned int tegra_base_for_cpu(int cpu, enum tegra_id_t tegra_id)
  {
--	if (__sync_val_compare_and_swap(lock, OSI_LOCKED, OSI_UNLOCKED) !=
-+	if (tracebuf_sync_sync_val_compare_and_swap_u32(lock, OSI_LOCKED, OSI_UNLOCKED) !=
- 	    OSI_LOCKED) {
- 		/* Do nothing. Already unlocked */
- 	}
-diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c
---- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c	2023-08-02 04:31:24.000000000 +0900
-+++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/eqos_core.c	2023-09-01 20:47:24.927573365 +0900
-@@ -28,6 +28,7 @@
- #include "core_local.h"
- #include "core_common.h"
- #include "macsec.h"
-+#include "eventlib/utility.h"
- 
- #ifdef UPDATED_PAD_CAL
- /*
-@@ -166,7 +167,7 @@
- 	nve32_t cond = COND_NOT_MET, ret = 0;
- 	nveu32_t value;
- 
--	__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
-+	tracebuf_sync_sync_val_compare_and_swap_u32(&osi_core->padctrl.is_pad_cal_in_progress,
- 				    OSI_DISABLE, OSI_ENABLE);
- 	ret = eqos_pre_pad_calibrate(osi_core);
- 	if (ret < 0) {
-@@ -226,7 +227,7 @@
- 	osi_writela(osi_core, value, (nveu8_t *)ioaddr + EQOS_PAD_CRTL);
- 	ret = eqos_post_pad_calibrate(osi_core) < 0 ? -1 : ret;
- error:
--	__sync_val_compare_and_swap(&osi_core->padctrl.is_pad_cal_in_progress,
-+	tracebuf_sync_sync_val_compare_and_swap_u32(&osi_core->padctrl.is_pad_cal_in_progress,
- 				    OSI_ENABLE, OSI_DISABLE);
- 
- 	return ret;
-diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c
---- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c	2023-08-02 04:31:24.000000000 +0900
-+++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/mgbe_core.c	2023-08-31 23:55:37.719397277 +0900
-@@ -30,6 +30,7 @@
- #include "mgbe_mmc.h"
- #include "core_common.h"
- #include "macsec.h"
-+#include "eventlib/utility.h"
- 
- /**
-  * @brief mgbe_poll_for_mac_accrtl - Poll for Indirect Access control and status
-@@ -2257,9 +2258,9 @@
- 	if ((mac_isr & MGBE_ISR_TSIS) == MGBE_ISR_TSIS) {
- 		struct osi_core_tx_ts *head = &l_core->tx_ts_head;
- 
--		if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
-+		if (tracebuf_sync_fetch_and_add_u32(&l_core->ts_lock, 1) == 1U) {
- 			/* mask return as initial value is returned always */
--			(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
-+			(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
- #ifndef OSI_STRIPPED_LIB
- 			osi_core->stats.ts_lock_add_fail =
- 				osi_update_stats_counter(osi_core->stats.ts_lock_add_fail, 1U);
-@@ -2306,7 +2307,7 @@
- 		}
- 
- 		/* mask return as initial value is returned always */
--		(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
-+		(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
- 	}
- done:
- 	return;
-diff -ur a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c
---- a/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c	2023-08-02 04:31:24.000000000 +0900
-+++ b/kernel/nvidia/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/core/osi_hal.c	2023-08-31 23:56:45.583913751 +0900
-@@ -34,6 +34,7 @@
- #ifndef OSI_STRIPPED_LIB
- #include "vlan_filter.h"
- #endif
-+#include "eventlib/utility.h"
- /**
-  * @brief g_ops - Static core operations array.
-  */
-@@ -1778,9 +1779,9 @@
- 	common_get_systime_from_mac(osi_core->base, osi_core->mac, &sec, &nsec);
- 	ts_val = (sec * OSI_NSEC_PER_SEC) + nsec;
- 
--	if (__sync_fetch_and_add(&l_core->ts_lock, 1) == 1U) {
-+	if (tracebuf_sync_fetch_and_add_u32(&l_core->ts_lock, 1) == 1U) {
- 		/* mask return as initial value is returned always */
--		(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
-+		(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
- #ifndef OSI_STRIPPED_LIB
- 		osi_core->stats.ts_lock_del_fail =
- 				osi_update_stats_counter(
-@@ -1826,7 +1827,7 @@
- 	}
- 
- 	/* mask return as initial value is returned always */
--	(void)__sync_fetch_and_sub(&l_core->ts_lock, 1);
-+	(void)tracebuf_sync_fetch_and_sub_u32(&l_core->ts_lock, 1);
- done:
- 	return ret;
+-	if (tegra20) {
++	if (tegra_id == tegra20) {
+ 		switch (cpu) {
+ 		case 0:
+ 			return TIMER1_BASE;
+@@ -227,28 +233,28 @@
+ 	return TIMER10_BASE + cpu * 8;
  }
+ 
+-static inline unsigned int tegra_irq_idx_for_cpu(int cpu, bool tegra20)
++static inline unsigned int tegra_irq_idx_for_cpu(int cpu, enum tegra_id_t tegra_id)
+ {
+-	if (tegra20)
++	if (tegra_id == tegra20 || tegra_id == tegra210)
+ 		return TIMER1_IRQ_IDX + cpu;
+ 
+ 	return TIMER10_IRQ_IDX + cpu;
+ }
+ 
+ static inline unsigned long tegra_rate_for_timer(struct timer_of *to,
+-						 bool tegra20)
++						 enum tegra_id_t tegra_id)
+ {
+ 	/*
+ 	 * TIMER1-9 are fixed to 1MHz, TIMER10-13 are running off the
+ 	 * parent clock.
+ 	 */
+-	if (tegra20)
++	if (tegra_id == tegra20)
+ 		return TIMER_1MHz;
+ 
+ 	return timer_of_rate(to);
+ }
+ 
+-static int __init tegra_init_timer(struct device_node *np, bool tegra20,
++static int __init tegra_init_timer(struct device_node *np, enum tegra_id_t tegra_id,
+ 				   int rating)
+ {
+ 	struct timer_of *to;
+@@ -301,9 +307,9 @@
+ 	for_each_possible_cpu(cpu) {
+ 		struct timer_of *cpu_to = per_cpu_ptr(&tegra_to, cpu);
+ 		unsigned long flags = IRQF_TIMER | IRQF_NOBALANCING;
+-		unsigned long rate = tegra_rate_for_timer(to, tegra20);
+-		unsigned int base = tegra_base_for_cpu(cpu, tegra20);
+-		unsigned int idx = tegra_irq_idx_for_cpu(cpu, tegra20);
++		unsigned long rate = tegra_rate_for_timer(to, tegra_id);
++		unsigned int base = tegra_base_for_cpu(cpu, tegra_id);
++		unsigned int idx = tegra_irq_idx_for_cpu(cpu, tegra_id);
+ 		unsigned int irq = irq_of_parse_and_map(np, idx);
+ 
+ 		if (!irq) {
+@@ -377,7 +383,7 @@
+ 	 * after CPUPORESET signal due to a system design shortcoming,
+ 	 * hence tegra-timer is more preferable on Tegra210.
+ 	 */
+-	return tegra_init_timer(np, false, 460);
++	return tegra_init_timer(np, tegra210, 460);
+ }
+ TIMER_OF_DECLARE(tegra210_timer, "nvidia,tegra210-timer", tegra210_init_timer);
+ 
+@@ -399,7 +405,7 @@
+ 	else
+ 		rating = 330;
+ 
+-	return tegra_init_timer(np, true, rating);
++	return tegra_init_timer(np, tegra20, rating);
+ }
+ TIMER_OF_DECLARE(tegra20_timer, "nvidia,tegra20-timer", tegra20_init_timer);
+ 

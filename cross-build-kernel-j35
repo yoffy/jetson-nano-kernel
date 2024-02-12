@@ -14,7 +14,8 @@ WORKDIR_J35="$(pwd)/workdir-j35"
 WORKDIR_J32="$(pwd)/a"
 TEGRA_KERNEL_OUT="${WORKDIR_J35}/out"
 TEGRA_KERNEL_OUT_J32="$(pwd)/workdir/out"
-KERNEL_DIR="${WORKDIR_J35}/kernel/kernel-5.10"
+KERNEL_DIR_J32="${WORKDIR_J32}/kernel/kernel-4.9"
+KERNEL_DIR_J35="${WORKDIR_J35}/kernel/kernel-5.10"
 
 export DTB=tegra210-p3448-0000-p3449-0000-b00.dtb
 
@@ -22,56 +23,131 @@ export LOCALVERSION="-tegra"
 export ARCH=arm64
 export INSTALL_MOD_PATH="${WORKDIR_J35}/modules"
 
-cp -r "${WORKDIR_J32}/hardware/nvidia/platform/t210" "${WORKDIR_J35}/hardware/nvidia/platform/"
-cp -r "${WORKDIR_J32}/hardware/nvidia/soc/t210" "${WORKDIR_J35}/hardware/nvidia/soc/"
-cp "${WORKDIR_J32}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/clock/tegra210-car.h" "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/clock/"
+## hardware
 rm -rf "${WORKDIR_J35}/hardware/nvidia/soc/"{t19x,t23x}
 rm -rf "${WORKDIR_J35}/hardware/nvidia/platform/"{t19x,t23x}
-sed -i -E '/^#define TEGRA_SWGROUP_/d' "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/memory/tegra210-mc.h"
+cp -r "${WORKDIR_J32}/hardware/nvidia/platform/t210" "${WORKDIR_J35}/hardware/nvidia/platform/"
+cp -r "${WORKDIR_J32}/hardware/nvidia/soc/t210" "${WORKDIR_J35}/hardware/nvidia/soc/"
+
+cp "${WORKDIR_J32}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/clock/tegra210-car.h" "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/clock/"
+#sed -i -E '/^#define TEGRA_SWGROUP_/d' "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/memory/tegra210-mc.h"
+sed -i -E 's/^#if TEGRA_IOMMU_DT_VERSION/#if 0 \&\& TEGRA_IOMMU_DT_VERSION/' "${WORKDIR_J35}/hardware/nvidia/soc/tegra/kernel-include/dt-bindings/memory/tegra210-mc.h"
+#rm -rf "${WORKDIR_J35}/hardware"
+#cp -r "${WORKDIR_J32}/hardware" "${WORKDIR_J35}/"
+#sed -i -E '162c#if 0' "${WORKDIR_J35}/hardware/nvidia/soc/t210/kernel-dts/tegra210-soc/tegra210-soc-base.dtsi"
+
 #cp "${WORKDIR_J32}/kernel/kernel-4.9/arch/arm64/configs/tegra_defconfig" "${WORKDIR_J35}/kernel/kernel-5.10/arch/arm64/configs/"
+
+## kernel/nvidia
+#rm -rf "${WORKDIR_J35}/kernel/nvidia/include/soc/*"
+#cp -r "${WORKDIR_J32}/kernel/nvidia/include/soc/tegra" "${WORKDIR_J35}/kernel/nvidia/include/soc/"
+#rm -rf "${WORKDIR_J35}/kernel/nvidia/include/linux/platform/*"
+#mv "${WORKDIR_J35}/kernel/nvidia/include/linux/platform/tegra/isomgr.h" /tmp/
+#cp -r "${WORKDIR_J32}/kernel/nvidia/include/linux/platform/tegra" "${WORKDIR_J35}/kernel/nvidia/include/linux/platform/"
+#mv /tmp/isomgr.h "${WORKDIR_J35}/kernel/nvidia/include/linux/platform/tegra/"
+#sed -i -E 's/CONFIG_TEGRA_MC/CONFIG_TEGRA_MC__NEVER_ENABLED/g' "${WORKDIR_J35}/kernel/nvidia/drivers/video/tegra/camera/tegra_camera_platform.c"
+
+## drivers
+#cp "${KERNEL_DIR_J32}/include/linux/tegra-soc.h" "${KERNEL_DIR_J35}/include/linux/"
+#mv "${KERNEL_DIR_J35}/include/soc/tegra/fuse.h" /tmp/
+#cp -r "${KERNEL_DIR_J32}/include/soc/tegra" "${KERNEL_DIR_J35}/include/soc/"
+#mv /tmp/fuse.h "${KERNEL_DIR_J35}/include/soc/tegra/"
+#sed -i -E '/unsigned int tegra_get_minor_rev/d' "${KERNEL_DIR_J35}/include/soc/tegra/chip-id.h"
+#sed -i -E 's/enum tegra_platform tegra_get_platform/enum tegra_platform tegra_get_platform/' "${KERNEL_DIR_J35}/include/soc/tegra/chip-id.h"
+
+#rm -rf "${KERNEL_DIR_J35}/drivers/soc/tegra"
+#cp -r "${KERNEL_DIR_J32}/drivers/soc/tegra" "${KERNEL_DIR_J35}/drivers/soc/"
+#cp "${KERNEL_DIR_J32}/drivers/iommu/tegra-iommu.c" "${KERNEL_DIR_J35}/drivers/iommu/"
+#if ! grep -F -q CONFIG_OF_TEGRA_IOMMU_SMMU "${KERNEL_DIR_J35}/drivers/iommu/Makefile"; then
+#	sed -i -E '25iobj-$(CONFIG_OF_TEGRA_IOMMU_SMMU) += tegra-iommu.o' "${KERNEL_DIR_J35}/drivers/iommu/Makefile"
+#fi
+#sed -i -E 's/ioremap_nocache/ioremap/g' "${KERNEL_DIR_J35}/drivers/soc/tegra/flowctrl.c"
+#sed -i -E '/wakeup_reason\.h/d; /log_wakeup_reason/d' "${KERNEL_DIR_J35}/drivers/soc/tegra/pmc.c"
+#if ! grep -F -q '<linux/slab.h>' "${WORKDIR_J35}/kernel/nvidia/drivers/video/tegra/host/nvhost_syncpt_dmabuf.c"; then
+#	sed -i -E '10i#include <linux/slab.h>' "${WORKDIR_J35}/kernel/nvidia/drivers/video/tegra/host/nvhost_syncpt_dmabuf.c"
+#fi
+#if ! grep -F -q '<linux/scatterlist.h>' "${WORKDIR_J35}/kernel/nvidia/drivers/video/tegra/host/nvhost_syncpt_unit_interface.h"; then
+#	sed -i -E '21i#include <linux/scatterlist.h>' "${WORKDIR_J35}/kernel/nvidia/drivers/video/tegra/host/nvhost_syncpt_unit_interface.h"
+#fi
+#cp -r "${KERNEL_DIR_J32}/drivers/clk/tegra" "${KERNEL_DIR_J35}/drivers/clk/"
+#find "${KERNEL_DIR_J32}/drivers/clk/tegra/" ! -name Kconfig -exec cp {} "${KERNEL_DIR_J35}/drivers/clk/tegra/" \;
+#cp -r "${KERNEL_DIR_J32}/drivers/clocksource" "${KERNEL_DIR_J35}/drivers/"
+
+## edit drivers/clocksource/timer-tegra.c: tegra210_init_timer
 
 pushd "${WORKDIR_J35}"
 
-#patch -p1 -N < "${KERNEL_PATCH}"
+if ! grep -F -q tracebuf_sync_sync_val_compare_and_swap_u32 "${WORKDIR_J35}/kernel/nvethernetrm/osi/common/common.h"; then
+	patch -p1 -N < "${KERNEL_PATCH}"
+fi
 #patch -p1 -R < "${KERNEL_PATCH}"
 #exit 1
 
 echo "Configuring kernel"
 rm -f "${TEGRA_KERNEL_OUT}/.config"
-make -C ${KERNEL_DIR} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} tegra_defconfig
+make -C ${KERNEL_DIR_J35} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} tegra_defconfig
 #mkdir -p "${TEGRA_KERNEL_OUT}"
 #cp "${TEGRA_KERNEL_OUT_J32}/.config" "${TEGRA_KERNEL_OUT}/"
 
 pushd "${TEGRA_KERNEL_OUT}"
 #patch -p1 -N < "${CIFS_PATCH}"
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8187
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8187_LEDS
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8188EE
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8821AE
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI_PCI
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI_USB
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTLWIFI_DEBUG
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8812AU
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8814AU
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8821AU
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8821CU
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8822BU
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8187
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8187_LEDS
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8188EE
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8821AE
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTLWIFI
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTLWIFI_PCI
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTLWIFI_USB
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTLWIFI_DEBUG
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8812AU
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8814AU
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8821AU
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8821CU
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8822BU
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_EFI_STUB
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_EFI
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_DMI
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_SENSORS_LIS3_SPI
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_PCIE_TEGRA_VF
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_PCIE_ECRC
 
-"${KERNEL_DIR}"/scripts/config --disable CONFIG_RTL8822CE
-"${KERNEL_DIR}"/scripts/config --enable CONFIG_ARCH_TEGRA_21x_SOC
+"${KERNEL_DIR_J35}"/scripts/config --disable CONFIG_RTL8822CE
+"${KERNEL_DIR_J35}"/scripts/config --enable CONFIG_ARCH_TEGRA_21x_SOC
+#"${KERNEL_DIR_J35}"/scripts/config --enable CONFIG_TEGRA210_TIMER
+#"${KERNEL_DIR_J35}"/scripts/config --enable CONFIG_OF_TEGRA_IOMMU_SMMU
 popd
 
 echo "Making kernel"
-make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} Image
+make -C ${KERNEL_DIR_J35} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} Image
+#make -C ${KERNEL_DIR_J35} V=1 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} Image
 
 echo "Making dtbs"
-make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
+make -C ${KERNEL_DIR_J35} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
+#make -C ${KERNEL_DIR_J35} V=1 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} dtbs
 
 echo "Making modules"
-make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules
+make -C ${KERNEL_DIR_J35} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules
 
 mkdir -p "${INSTALL_MOD_PATH}"
-make -C ${KERNEL_DIR} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules_install
+make -C ${KERNEL_DIR_J35} -j$(( $(nproc) + 1 )) CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc O=${TEGRA_KERNEL_OUT} modules_install
 
 popd
+
+#sudo cp -r workdir-j35/modules/lib /mnt/mmc/
+#sudo cp workdir-j35/out/arch/arm64/boot/Image /mnt/mmc/boot/Image-j35
+#sudo cp workdir-j35/out/arch/arm64/boot/dts/nvidia/* /mnt/mmc/boot/
+#sudo cp workdir-j35/out/arch/arm64/boot/dts/nvidia/tegra210-p3448-0000-p3449-0000-b00.dtb /mnt/mmc/boot/dtb/kernel_tegra210-p3448-0000-p3449-0000-b00.dtb
+
+#mkdir initrd-j32 initrd-j35 initrd-j35-nano
+#zcat initrd.j32 | cpio --directory=initrd-j32/ -id
+#zcat initrd.j35 | cpio --directory=initrd-j35/ -id
+#cp -r initrd-j35 initrd-j35-nano
+#cp -r initrd-j32/lib/firmware/nvidia/tegra210 initrd-j35-nano/lib/firmware/nvidia/
+#ln -s nvidia/tegra210/xusb.bin initrd-j35-nano/lib/firmware/tegra21x_xusb_firmware
+#find initrd-j35-nano | cpio -R 0:0 -o -H newc | gzip > initrd.j35-nano
+
+#sudo -e /mnt/mmc/boot/extlinux/extlinux.conf
+#  FDT /boot/dtb/kernel_tegra210-p3448-0000-p3449-0000-b00.dtb
+#  LINUX /boot/Image-j35
+#  INITRD /boot/initrd.j35-nano
+#  APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=7 loglevel=7 efi=debug console=ttyS0,115200n8 console=tty0 firmware_class.path=/etc/firmware fbcon=map:0 net.ifnames=0
